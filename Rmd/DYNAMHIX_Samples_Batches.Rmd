@@ -1,0 +1,178 @@
+---
+title: "Samples for protein assays"
+output: html_document
+date: "2024-09-30"
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load libraries, echo=FALSE, message=FALSE, warning = FALSE}
+
+library(ggplot2)
+source("DYNAMHIX_Functions.R")
+
+```
+
+
+## Overview
+
+This doc just describes choosing samples for batches for serum protein assays. Includes:
+
+* Zonulin
+* ALP
+
+For the first batch (and this will initially be tried on zonulin kits) we will make sure that there are >2 aliquots of serum available for use and there are 5 timepoints available. 
+
+## Checking the samples that we have
+
+These are the samples that are either PSC-UC or UC.
+
+```{r samples, echo=FALSE, message=FALSE}
+
+dat <- read.csv("CMS031NIIL_DATA_LABELS_2024-09-30_0800.csv",
+                header = TRUE,
+                stringsAsFactors = FALSE,
+                sep="\t")
+
+# recode the variables
+dat <- recode_dat(dat)
+
+# all of the aliquot data that we have
+aliquots <- get_aliquot_data(dat)
+
+# get patient ids when UC or PSC-UC
+diagnosis_to_keep <- dat$Participant.ID[dat$Diagnosis == "PSC-UC" | dat$Diagnosis == "UC"]
+
+# aliquots to keep based on PSC-UC or UC diagnosis
+aliquots <- aliquots[aliquots$Patient_ID %in% diagnosis_to_keep,]
+
+# just get the serum samples
+aliquots <- aliquots[grep("_SE_", aliquots$Sample_ID),]
+
+# create kitID for aliquots
+kitid <- strsplit(aliquots$Sample_ID, "_")
+kitid <- lapply(kitid, function(x) paste0(x[1], "_", x[2]))
+kitid <- unlist(kitid)
+
+aliquots$Kit_ID <- kitid
+  
+# get table of total numbers
+df_aliquots <- data.frame(Total_Patients = length(unique(aliquots$Patient_ID)),
+                          Total_Aliquots = nrow(aliquots))
+
+
+```
+
+## Number of aliquots per sample
+
+Below is a table that shows the number of aliquots per sample (i.e. kit id).
+
+```{r aliquots per sample, echo=FALSE, message=FALSE}
+
+sample_aliquots <- as.data.frame(table(c(aliquots$Kit_ID)))
+colnames(sample_aliquots) <- c("Sample", "No. Aliquots")
+
+knitr::kable(sample_aliquots)
+
+```
+
+## Get timepoint information
+
+Here I just look at the number of timepoints per patient.
+
+```{r timepoints, echo=FALSE, message=FALSE}
+
+timepoints <- get_variable_data(dat, variable = "Event.Name")
+timepoints <- timepoints[timepoints$PID %in% diagnosis_to_keep,]
+
+df_timepoints <- as.data.frame(table(timepoints$PID))
+colnames(df_timepoints) <- c("Patient_ID", "No. Timepoints")
+
+knitr::kable(df_timepoints)
+```
+
+
+## Get batches
+
+The first batch is going to be the ones that have enough aliquots and 5 timepoints - this is because we are trying out the kits (ZO1).
+
+
+```{r batches, echo=FALSE, message=FALSE}
+
+# get patients with 5 timepoints
+fivers <- df_timepoints[df_timepoints$`No. Timepoints` == 5,]
+
+# get aliquots with 5 timepoints and max serum samples
+samples <- sample_aliquots[sample_aliquots$`No. Aliquots` >= 3,]
+
+# both criteria
+aliquots_to_sample <- aliquots[aliquots$Patient_ID %in%
+                                 fivers$Patient_ID &
+                                 aliquots$Kit_ID %in%
+                                 samples$Sample,]
+
+# re-check the number of patient samples - should be five but not
+# all neccesarily have a full set of aliquots
+#patients_fit <- as.data.frame(table(aliquots_to_sample$Patient_ID))
+
+aliquots_to_sample <- aliquots_to_sample[order(aliquots_to_sample$Patient_ID),]
+
+# just the SE_A ones
+aliquots_to_sample <- aliquots_to_sample[grep("SE_A", aliquots_to_sample$Sample_ID),]
+
+# readjust based on patients that still have all 5
+x <- as.data.frame(table(aliquots_to_sample$Patient_ID))
+x <- x[order(x$Freq, decreasing=TRUE),]
+
+# need 42 samples to start with - take the first 8 patients
+patients_to_take <- as.character(x[1:8, 1])
+
+# Also add two extras - going to add GI9105 first two timepoints
+
+aliquots_to_take <- aliquots_to_sample[aliquots_to_sample$Patient_ID %in% patients_to_take |
+                                         aliquots_to_sample$Sample_ID == "CMS031_030_SE_A" |
+                                         aliquots_to_sample$Sample_ID == "CMS031_057_SE_A",]
+
+
+
+# add the aliquot id as the rownames
+rownames(aliquots_to_take) <- aliquots_to_take$Sample_ID
+
+# do the same with the original aliquots file
+rownames(aliquots) <- aliquots$Sample_ID
+
+# add batch name to the aliquots table
+aliquots$batch <- NA
+
+aliquots$batch <- ifelse(aliquots$Sample_ID %in% aliquots_to_take$Sample_ID, 1, aliquots$batch)
+
+## Final table for Kate to use
+aliquots <- aliquots[order(aliquots$batch, aliquots$Patient_ID),]
+
+final_aliquot_table <- data.frame(aliquot_id = aliquots$Sample_ID,
+                                  kit_id = aliquots$Kit_ID,
+                                  patient_id = aliquots$Patient_ID,
+                                  box = aliquots$Box,
+                                  box_position = aliquots$Position,
+                                  batch = aliquots$batch)
+
+write.table(final_aliquot_table,
+            file = "DYNAMHIX_Aliquot_Batches.tsv",
+            quote=FALSE,
+            row.names=FALSE,
+            sep="\t")
+
+```
+
+
+
+
+
+
+
+
+

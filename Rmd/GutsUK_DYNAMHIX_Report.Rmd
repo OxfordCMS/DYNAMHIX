@@ -1,0 +1,340 @@
+---
+title: 'ECR2021_04 DYNAMHIX in PSC: 2023 progress report'
+author: |
+  | Dr Nicholas Ilott
+  | Dr Emma Culver
+  | Dr Claire Pearson
+  | Professor Paul Klenerman
+  | Professor Dame Fiona Powrie
+  | Professor James McCullagh
+  | Professor Simon Leedham
+  | Arran Babbs
+  | Louise Holland
+  | Abbey Martin
+  | TGU biobank team
+date: "`r Sys.Date()`"
+output:
+  html_document: default
+  pdf_document:
+    toc: yes
+    toc_depth: 2
+  word_document:
+    toc: yes
+    toc_depth: '2'
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load libraries, echo=FALSE, message=FALSE}
+library(ggplot2)
+library(dplyr)
+source("DYNAMHIX_Functions.R")
+```
+
+## Overview
+
+We have successfully established the DYNAMHIX in PSC cohort and are on-course to generate a rich set of data for investigating liver, microbiome and intestinal parameters that will give insight into disease course and inter-tissue relationships. Since the last report, we have successfully recruited our target number of participants (n = 12 PSC-UC and n = 12 UC) and are currently collecting samples at follow-up appointments. More details can be found below.
+
+## Overarching aim
+
+**Question**: Is there a correlation between reduced serum biomarkers of liver function/bile flow, microbiota-derived metabolite levels and inflammatory protein markers over the course of disease in PSC-UC? 
+
+## Specific aims
+
+### Aim 1
+
+Establish the longitudinal dynamics of the hepatic-intestinal axis in PSC (DYNAMHIX in PSC) cohort.
+We will begin enrolling participants into the DYNAMHIX in PSC cohort. Over two years we aim to enrol 40 patients with PSC-UC and 40 patients with UC (full 1 year follow-up), each as close to diagnosis as possible and before the initiation of disease-specific therapy. Currently we conduct two PSC clinics/week and eight IBD clinics/week in Oxford, with a rate of 2-4 new referrals of PSC-UC /month and 4-6 UC patients/month. 
+
+From these patients we will collect samples that includes longitudinal sampling of stool, plasma, serum and intestinal biopsies. Alongside biological materials we will collect a rich set of metadata that includes clinical data in case report forms (CRF) as well as dietary information obtained through questionnaire. These metadata will be stored in a secure, de-anonymised REDCap database. 
+
+### Aim 1 progress
+
+We applied to the Translational Gastroenterology Unit (TGU) studies committee and the DYNAMHIX in PSC study was approved as a sub-project of the wider gastrointestinal (GI) biobank study (approved in April 2022). This meant securing resource investment (personnel) for consenting participants, sample collection and collection of metadata by members of the Gastroenterology & Hepatology Clinical Trials Facility and members of the TGU Biobanking team. From an operational perspective we have a fully functioning recruitment and sample collection procedure whereby members of the Gastroenterology & Hepatology Clinical Trials Facility screen PSC clinic lists for eligible participants and consent them onto the study. The team also provide stool kits to participants for at-home stool sample collection, as well as draw blood for plasma and serum processing. The research team at the Kennedy Institute of Rheumatology (KIR) process the blood samples and receive the stool samples through the post.
+
+Alongside the collection of biological materials, we have established a secure RedCap database that is accessed by members of the Gastroenterology & Hepatology Clinical Trials Facility for collecting patient metadata as well as members of the research team at the KIR in order to track samples and enter diet questionnaire data.
+
+
+
+```{r total number of participants, echo=FALSE, message=FALSE}
+library(ggplot2)
+
+# read in data
+dat <- read.csv("CMS031NIIL_DATA_LABELS_2024-03-05_0925.csv", sep="\t", header=TRUE)
+
+# get rid of the test column
+dat <- dat[grep("GI*", dat$Participant.ID), ]
+npart <- length(unique(dat$Participant.ID))
+```
+
+We currently have `r npart` participants on the study. Early progress was slower than anticipated due to our initial requirements for participants to have a new disease diagnosis. However, we have successfully adapted our recruitment through making two GutsUK-approved amendments to the eligibility criteria (outlined in the figure below), which have both had a positive impact on recruitment. We succesfully recruited our target number of participants by October 2023 which means that we will continue to follow up patients on the study until September/October 2024. The figure below shows new participants on the study at each month, which has tailed off since we stopped taking on new participants in October 2023.
+
+```{r patients per month, echo=FALSE, message=FALSE, fig.height=6, fig.width=14}
+
+# just get timepoint 1 for this
+tp1 <- dat[dat$Event.Name == "TP1",]
+tp1 <- tp1[tp1$Sample.type == "Plasma_PL",]
+
+tp1_month <- strsplit(tp1$Date.kit.supplied.to.participant, "-")
+tp1_month <- unlist(lapply(tp1_month, function (x) paste0(x[1], "-", x[2])))
+tp1$month_collected <- tp1_month
+
+counts_per_month <- as.data.frame(table(tp1_month))
+rownames(counts_per_month) <- counts_per_month$tp1_month
+
+# add in all months
+all_months <- c("2022-06", "2022-07", "2022-08", "2022-09", "2022-10", "2022-11", "2022-12",
+                "2023-01", "2023-02", "2023-03", "2023-04", "2023-05", "2023-06", "2023-07",
+                "2023-08", "2023-09", "2023-10", "2023-11", "2023-12", "2024-01",
+                "2024-02", "2024-03")
+
+counts_month <- data.frame("Month" = all_months,
+                           "Count" = counts_per_month[all_months,]$Freq)
+counts_month[is.na(counts_month)] <- 0
+
+counts_month$Cumulative <- cumsum(counts_month$Count)
+
+amendment1 <- "2022-08"
+amendment2 <- "2023-03"
+
+ggplot(counts_month, aes(x=Month, y=Count)) +
+  geom_bar(stat="identity") +
+  theme_classic() +
+  geom_line(data = counts_month, aes(x=Month, y=Cumulative, group=1), color="blue") +
+  geom_vline(xintercept = c(amendment1, amendment2), linetype="dashed", color="grey") +
+  annotate(x = amendment1, y=10, hjust=0, color="darkgrey", geom="text", label="Amendment 1") +
+  annotate(x = amendment2, y=16, hjust=0, color="darkgrey", geom="text", label="Amendment 2") +
+  annotate(x = 0.5, y= 16, hjust=0, color="darkgrey", geom="text", label="Amendment 1 = Change from new diagnosis to < 2 years") + 
+  annotate(x = 0.5, y= 15, hjust=0, color="darkgrey", geom="text", label="Amendment 2 = Change from < 2 years to no cirrhosis") + 
+  theme_classic() +
+  theme(axis.text.x=element_text(angle=45, hjust=1))
+  
+```
+
+### Aim 2
+
+Pilot study of hepatic-intestinal dynamics in a subset of DYNAMHIX in PSC patients.
+Further funding will be required to obtain data on the full DYNAMHIX cohort. Therefore, we aim to collect pilot longitudinal data that will be used to perform power analysis and support future funding applications. To this end we will perform faecal metabolomics, serum liver function tests and faecal inflammatory marker analysis over the course of 1 year on 12 patients with PSC-UC and 12 patients with UC. We have chosen a total of 12 patients/group as this is the number that would be recruited after 5 months of the project starting and would provide full follow-up data and time for the analysis of time-dependent changes in the assayed parameters. 
+
+
+### Aim 2 progress
+
+We have been successfully tracking particpants for follow-ups in order to obtain longitudinal samples. The blood and stool samples collected to-date are shown below.
+
+```{r sample collection, echo=FALSE, message=FALSE, fig.height=6, fig.width=14}
+
+# Guts Uk annual report
+stool <- dat[grep("_ET", dat$Sample.ID),]
+blood <- dat[grep("_PL", dat$Sample.ID),]
+
+diagnoses <- data.frame(pid=dat$Participant.ID,
+                        diagnosis=dat$Diagnosis,
+                        tp = dat$Event.Name)
+
+diagnoses <- unique(diagnoses[diagnoses$diagnosis != "",])
+
+# if diagnosis changes there will be non-unique
+# pids. Take the first one
+diagnoses <- diagnoses[diagnoses$tp == "TP1",]
+rownames(diagnoses) <- diagnoses$pid
+
+stool$Diagnosis <- diagnoses[stool$Participant.ID,]$diagnosis
+blood$Diagnosis <- diagnoses[blood$Participant.ID,]$diagnosis
+
+stool <- stool[stool$Diagnosis != "" & stool$Diagnosis != "PSC-CD",]
+blood <- blood[blood$Diagnosis != "" & blood$Diagnosis != "PSC-CD",]
+stool <- stool[!(is.na(stool$Participant.ID)),]
+blood <- blood[!(is.na(blood$Participant.ID)),]
+
+stool$type <- rep("Stool", nrow(stool))
+blood$type <- rep("Blood", nrow(blood))
+
+# add an extra column in blood for sorting by
+# number of visits
+visit_numbers <- as.data.frame(table(blood$Participant.ID))
+rownames(visit_numbers) <- visit_numbers$Var1
+blood$visit_number <- visit_numbers[blood$Participant.ID,]$Freq
+
+stool$visit_number <- visit_numbers[stool$Participant.ID,]$Freq
+
+all_collected <- dplyr::bind_rows(blood, stool)
+all_collected <- all_collected[!(is.na(all_collected$Diagnosis)), ]
+all_collected <- all_collected[order(all_collected$visit_number, decreasing = FALSE),]
+all_collected$Participant.ID <- factor(all_collected$Participant.ID, levels = unique(all_collected$Participant.ID))
+
+p_all <- ggplot(all_collected, aes(x=Event.Name, y=Participant.ID, group=Participant.ID, shape=Diagnosis, color=type)) +
+  geom_point(size=3) +
+  theme_classic() +
+  geom_line() +
+  scale_x_discrete(name="Timepoint", labels=c("TP1", "TP2", "TP3", "TP4", "TP5")) +
+  ylab("Participant ID") +
+  ggtitle("Samples obtained") +
+  facet_wrap(~type) +
+  scale_color_manual(values = c("red", "brown"))
+
+p_all
+
+p_stool <- ggplot(stool, aes(x=Event.Name, y=Participant.ID, group=Participant.ID, shape=Diagnosis)) +
+  geom_point(color="brown", size=3) +
+  theme_classic() +
+  geom_line(color="brown") +
+  scale_x_discrete(name="Timepoint", labels=c("TP1", "TP2", "TP3", "TP4", "TP5")) +
+  ylab("Participant ID") +
+  ggtitle("Stool samples obtained")
+
+
+p_blood <- ggplot(blood, aes(x=Event.Name, y=Participant.ID, group=Participant.ID, shape=Diagnosis)) +
+  geom_point(color="red3", size=3) +
+  theme_classic() +
+  geom_line(color="red3") +
+  scale_x_discrete(name="Timepoint", labels=c("TP1", "TP2", "TP3", "TP4", "TP5")) +
+  ylab("Participant ID") +
+  ggtitle("Blood samples obtained")
+
+p_all
+ggsave("collection_all.pdf", width=7, height=5)
+
+stool_collection_success <- round((nrow(all_collected[all_collected$type == "Stool",])/nrow(all_collected[all_collected$type == "Blood",]))*100)
+
+###########################################################
+# output stool samples and locations
+###########################################################
+stool_out <- data.frame(PatiendID = stool$Participant.ID,
+                        SampleID = stool$Sample.ID,
+                        Freezer = stool$Freezer,
+                        Location = stool$Drawer)
+
+filename_stool <- paste0("/Users/Nilott/Documents/Human_tissue/CMS031_Stool_", Sys.Date(), ".tsv")
+write.table(stool_out, file=filename_stool,
+            row.names=FALSE,
+            quote=FALSE,
+            sep="\t")
+
+```
+
+As can be observed in the plot, we have obtained samples at multiple time points for the majority of participants and have followed up 6 particpants for the full year. As mentioned, we are on track to obtain follow-up samples by September/October 2024. In line with previous studies that we have performed, we are now receiving the majority of at-home collected stool samples which is at a rate of `r stool_collection_success`%. 
+
+
+## Initial results
+
+We have now collected enough data that we can begin to explore some of the participant metadata at baseline and over time. Variation in the intestinal microbiome is associated with many factors including age, medication, stool consistency, antibiotic use and diet. We have been collecting data on many of these factors and explore below the distribution across our groups of interest. In the final analysis we aim to build these factors into our statistical models and so here we perform exploratory analysis to see whether they would confound any between group comparisons.
+
+### Age at baseline
+
+We do not see any significant difference in age between experimental groups at baseline. 
+
+```{r age between groups, echo=FALSE, message=FALSE}
+
+# get the colors
+group_colors <- c("PSC-only" = blues9[5], "PSC-UC"= blues9[8], "UC" = "red4")
+
+age <- get_variable_data(dat, variable = "Age")
+age <- age[age$Diagnosis != "PSC-CD",]
+age <- ggplot(age, aes(x=Diagnosis, y = Age, color=Diagnosis)) +
+  geom_boxplot(outlier.alpha=0) +
+  geom_jitter(height = 0, width=0.1) +
+  scale_color_manual(values = group_colors) +
+  theme_classic() +
+  ggpubr::stat_compare_means()
+
+```
+
+### Medication use at baseline
+
+```{r medication, echo=FALSE, message=FALSE}
+
+steroids <- get_variable_data(dat, variable="Steroid")
+steroids$medication <- "Steroid"
+colnames(steroids) <- c("PID", "Use", "Timepoint", "Diagnosis", "medication")
+
+vedolizumab <- get_variable_data(dat, variable = "Vedolizumab")
+vedolizumab$medication <- "Vedolizumab"
+colnames(vedolizumab) <- c("PID", "Use", "Timepoint", "Diagnosis", "medication")
+
+aza <- get_variable_data(dat, variable = "AZA_6MP_ISS.")
+aza$medication <- "Azathioprine"
+colnames(aza) <- c("PID", "Use", "Timepoint", "Diagnosis", "medication")
+
+asa <- get_variable_data(dat, variable = "X5_ASA")
+asa$medication <- "5-ASA"
+colnames(asa) <- c("PID", "Use", "Timepoint", "Diagnosis", "medication")
+
+dmard <- get_variable_data(dat, variable = "DMARD")
+dmard$medication <- "DMARD"
+colnames(dmard) <- c("PID", "Use", "Timepoint", "Diagnosis", "medication")
+
+urso <- get_variable_data(dat, variable = "URSO")
+urso$medication <- "URSO"
+colnames(urso) <- c("PID", "Use", "Timepoint", "Diagnosis", "medication")
+
+other <- get_variable_data(dat, variable = "Other")
+other$medication <- "Other"
+colnames(other) <- c("PID", "Use", "Timepoint", "Diagnosis", "medication")
+
+# get other IBD meds from here
+antitnf <- other
+antitnf$Use <- ifelse(grepl("Adalimumab|infliximab|certolizumab|golimumab", antitnf$Use, ignore.case = TRUE), "Yes", "No")
+antitnf$medication <- "anti-TNF"
+
+mesalazine <- other
+mesalazine$Use <- ifelse(grepl("Mesalazine|Octasa|Mezalazine", mesalazine$Use, ignore.case = TRUE), "Yes", "No")
+mesalazine$Use <- ifele(asa$Use == "Yes", "Yes", mesalazine$Use)
+mesalazine$medication <- "Mesalazine"
+
+all_med <- dplyr::bind_rows(list(steroids,
+                                 vedolizumab,
+                                 aza,
+                                 #asa,
+                                 dmard,
+                                 urso,
+                                 antitnf,
+                                 mesalazine))
+
+
+
+all_med <- all_med[all_med$Timepoint == "TP1" & all_med$Diagnosis != "PSC-CD",]
+
+
+ggplot(all_med, aes(x=Diagnosis, fill=Use)) +
+  geom_bar() +
+  theme_classic() +
+  scale_fill_manual(values = c("grey", "slategrey")) +
+  ylim(0,12) +
+  facet_wrap(~medication) 
+
+
+# perhaps a heatmap
+for_heat <- list(steroids = steroids$PID[steroids$Use == "Yes"],
+                 vedolizumab = vedolizumab$PID[vedolizumab$Use == "Yes"],
+                 aza = aza$PID[aza$Use == "Yes"],
+                 anti_tnf = antitnf$PID[antitnf$Use == "Yes"],
+                 dmard = dmard$PID[dmard$Use == "Yes"],
+                 urso = urso$PID[urso$Use == "Yes"],
+                 mesalazine = mesalazine$PID[mesalazine$Use == "Yes"])
+for_heat <- ComplexHeatmap::list_to_matrix(for_heat)
+ComplexHeatmap::Heatmap(t(for_heat), rect_gp = gpar(col = "white", lwd = 2))
+
+```
+
+
+
+### Stool consistency is variable over time
+
+We have now collected
+
+
+
+
+
+## Patient and public involvement
+
+The overview of the study is publicly available to view on the Kennedy Institute website (https://www.kennedy.ox.ac.uk/research/research-groups/mucosal-immunology/dynamhix-in-psc-uc). I also presented the study design and progress at the annual PSC-UK steering committee meeting that was held in Oxford (January 2023) and included members of PSC-UK as well as the chief executive and assistant to the chief executive of the patient support group, PSC Support. This provided valuable feedback and contributed to improvements in study design through the second amendment in May 2023. In addition to feedback, I have since liaised with PSC Support and the study is also available to view and sign up to on the PSC Support website (https://pscsupport.org.uk/find-psc-research-studies/dynamhix/). The presence on the PSC Support website has created interest in the study and we have received referrals for the study through this stream.  
+
+## Aknowledgements
+
+We would like to thank all of the study participants for their help with our research.
+
